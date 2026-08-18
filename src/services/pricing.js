@@ -1,80 +1,45 @@
 // Provider Definitions
 export const PROVIDERS = [
   { id: 'all', name: 'All Companies', badgeColor: '#6366f1' },
-  { id: 'Anthropic', name: 'Claude (Anthropic)', badgeColor: '#d97706' },
   { id: 'OpenAI', name: 'ChatGPT (OpenAI)', badgeColor: '#10b981' },
+  { id: 'Anthropic', name: 'Claude (Anthropic)', badgeColor: '#d97706' },
   { id: 'Google', name: 'Gemini (Google)', badgeColor: '#3b82f6' }
 ];
 
 // Cloud AI Pricing Database (per 1 Million tokens in USD)
 export const CLOUD_MODELS = {
-  // --- Anthropic (Claude) ---
-  'claude-3-7-sonnet': {
-    name: 'Claude 3.7 Sonnet',
-    company: 'Anthropic',
-    provider: 'Anthropic',
-    inputCostPer1M: 3.00,
-    outputCostPer1M: 15.00,
-    badgeColor: '#d97706',
-    popular: true,
-    tag: 'Latest'
-  },
-  'claude-3-5-sonnet': {
-    name: 'Claude 3.5 Sonnet',
-    company: 'Anthropic',
-    provider: 'Anthropic',
-    inputCostPer1M: 3.00,
-    outputCostPer1M: 15.00,
-    badgeColor: '#d97706',
-    popular: true
-  },
-  'claude-3-5-haiku': {
-    name: 'Claude 3.5 Haiku',
-    company: 'Anthropic',
-    provider: 'Anthropic',
-    inputCostPer1M: 0.80,
-    outputCostPer1M: 4.00,
-    badgeColor: '#d97706',
-    tag: 'Fast'
-  },
-  'claude-3-opus': {
-    name: 'Claude 3 Opus',
-    company: 'Anthropic',
-    provider: 'Anthropic',
-    inputCostPer1M: 15.00,
-    outputCostPer1M: 75.00,
-    badgeColor: '#b45309'
-  },
-
-  // --- OpenAI (ChatGPT) ---
-  'gpt-4o': {
-    name: 'ChatGPT (GPT-4o)',
+  // ==========================================
+  // --- OpenAI (ChatGPT & Frontier Models) ---
+  // ==========================================
+  'gpt-5-6-sol': {
+    name: 'GPT-5.6 Sol',
     company: 'OpenAI',
     provider: 'OpenAI',
-    inputCostPer1M: 2.50,
-    outputCostPer1M: 10.00,
+    inputCostPer1M: 5.00,
+    outputCostPer1M: 30.00,
     badgeColor: '#10b981',
     popular: true,
     tag: 'Flagship'
   },
-  'gpt-4o-mini': {
-    name: 'ChatGPT (GPT-4o mini)',
+  'gpt-5-6-terra': {
+    name: 'GPT-5.6 Terra',
     company: 'OpenAI',
     provider: 'OpenAI',
-    inputCostPer1M: 0.15,
-    outputCostPer1M: 0.60,
+    inputCostPer1M: 2.00,
+    outputCostPer1M: 12.00,
     badgeColor: '#10b981',
     popular: true,
-    tag: 'Efficient'
+    tag: 'Balanced'
   },
-  'openai-o3-mini': {
-    name: 'OpenAI o3-mini',
+  'gpt-5-6-luna': {
+    name: 'GPT-5.6 Luna',
     company: 'OpenAI',
     provider: 'OpenAI',
-    inputCostPer1M: 1.10,
-    outputCostPer1M: 4.40,
+    inputCostPer1M: 0.20,
+    outputCostPer1M: 1.20,
     badgeColor: '#10b981',
-    tag: 'Reasoning'
+    popular: true,
+    tag: 'Fast / Efficient'
   },
   'openai-o1': {
     name: 'OpenAI o1',
@@ -85,6 +50,15 @@ export const CLOUD_MODELS = {
     badgeColor: '#059669',
     tag: 'Deep Think'
   },
+  'openai-o3-mini': {
+    name: 'OpenAI o3-mini',
+    company: 'OpenAI',
+    provider: 'OpenAI',
+    inputCostPer1M: 1.10,
+    outputCostPer1M: 4.40,
+    badgeColor: '#10b981',
+    tag: 'Reasoning'
+  },
   'gpt-4-5-preview': {
     name: 'GPT-4.5 Preview',
     company: 'OpenAI',
@@ -94,16 +68,93 @@ export const CLOUD_MODELS = {
     badgeColor: '#059669',
     tag: 'Research'
   },
-  'gpt-4-turbo': {
-    name: 'GPT-4 Turbo',
+  'gpt-4o': {
+    name: 'ChatGPT (GPT-4o)',
     company: 'OpenAI',
     provider: 'OpenAI',
-    inputCostPer1M: 10.00,
-    outputCostPer1M: 30.00,
-    badgeColor: '#059669'
+    inputCostPer1M: 2.50,
+    outputCostPer1M: 10.00,
+    badgeColor: '#10b981'
+  },
+  'gpt-4o-mini': {
+    name: 'ChatGPT (GPT-4o mini)',
+    company: 'OpenAI',
+    provider: 'OpenAI',
+    inputCostPer1M: 0.15,
+    outputCostPer1M: 0.60,
+    badgeColor: '#10b981'
   },
 
-  // --- Google (Gemini) ---
+  // ==========================================
+  // --- Anthropic (Claude Models) ---
+  // ==========================================
+  'claude-mythos-5': {
+    name: 'Claude Mythos 5',
+    company: 'Anthropic',
+    provider: 'Anthropic',
+    inputCostPer1M: 10.00,
+    outputCostPer1M: 50.00,
+    badgeColor: '#d97706',
+    tag: 'Frontier Tier'
+  },
+  'claude-opus-5': {
+    name: 'Claude Opus 5',
+    company: 'Anthropic',
+    provider: 'Anthropic',
+    inputCostPer1M: 5.00,
+    outputCostPer1M: 25.00,
+    badgeColor: '#b45309',
+    popular: true,
+    tag: 'Flagship 5'
+  },
+  'claude-sonnet-5': {
+    name: 'Claude Sonnet 5',
+    company: 'Anthropic',
+    provider: 'Anthropic',
+    inputCostPer1M: 2.00,
+    outputCostPer1M: 10.00,
+    badgeColor: '#d97706',
+    popular: true,
+    tag: 'Workhorse'
+  },
+  'claude-haiku-4-5': {
+    name: 'Claude Haiku 4.5',
+    company: 'Anthropic',
+    provider: 'Anthropic',
+    inputCostPer1M: 1.00,
+    outputCostPer1M: 5.00,
+    badgeColor: '#d97706',
+    tag: 'High Speed'
+  },
+  'claude-3-7-sonnet': {
+    name: 'Claude 3.7 Sonnet',
+    company: 'Anthropic',
+    provider: 'Anthropic',
+    inputCostPer1M: 3.00,
+    outputCostPer1M: 15.00,
+    badgeColor: '#d97706',
+    tag: '3.x Series'
+  },
+  'claude-3-5-sonnet': {
+    name: 'Claude 3.5 Sonnet',
+    company: 'Anthropic',
+    provider: 'Anthropic',
+    inputCostPer1M: 3.00,
+    outputCostPer1M: 15.00,
+    badgeColor: '#d97706'
+  },
+  'claude-3-opus': {
+    name: 'Claude 3 Opus',
+    company: 'Anthropic',
+    provider: 'Anthropic',
+    inputCostPer1M: 15.00,
+    outputCostPer1M: 75.00,
+    badgeColor: '#b45309'
+  },
+
+  // ==========================================
+  // --- Google (Gemini Models) ---
+  // ==========================================
   'gemini-3-7-flash': {
     name: 'Gemini 3.7 Flash',
     company: 'Google',
