@@ -104,24 +104,51 @@ export const CLOUD_MODELS = {
   },
 
   // --- Google (Gemini) ---
+  'gemini-3-7-flash': {
+    name: 'Gemini 3.7 Flash',
+    company: 'Google',
+    provider: 'Google',
+    inputCostPer1M: 0.75,
+    outputCostPer1M: 3.75,
+    badgeColor: '#3b82f6',
+    popular: true,
+    tag: 'Latest 3.x'
+  },
+  'gemini-3-1-pro': {
+    name: 'Gemini 3.1 Pro',
+    company: 'Google',
+    provider: 'Google',
+    inputCostPer1M: 1.25,
+    outputCostPer1M: 5.00,
+    badgeColor: '#3b82f6',
+    popular: true,
+    tag: 'Flagship 3.x'
+  },
+  'gemini-3-5-flash': {
+    name: 'Gemini 3.5 Flash',
+    company: 'Google',
+    provider: 'Google',
+    inputCostPer1M: 0.15,
+    outputCostPer1M: 0.60,
+    badgeColor: '#3b82f6',
+    tag: 'Workhorse'
+  },
+  'gemini-3-5-flash-lite': {
+    name: 'Gemini 3.5 Flash-Lite',
+    company: 'Google',
+    provider: 'Google',
+    inputCostPer1M: 0.075,
+    outputCostPer1M: 0.30,
+    badgeColor: '#3b82f6',
+    tag: 'Efficient'
+  },
   'gemini-2-0-flash': {
     name: 'Gemini 2.0 Flash',
     company: 'Google',
     provider: 'Google',
     inputCostPer1M: 0.10,
     outputCostPer1M: 0.40,
-    badgeColor: '#3b82f6',
-    popular: true,
-    tag: 'Latest Gen'
-  },
-  'gemini-2-0-pro-exp': {
-    name: 'Gemini 2.0 Pro (Exp)',
-    company: 'Google',
-    provider: 'Google',
-    inputCostPer1M: 1.25,
-    outputCostPer1M: 5.00,
-    badgeColor: '#3b82f6',
-    tag: 'Next-Gen'
+    badgeColor: '#3b82f6'
   },
   'gemini-1-5-pro': {
     name: 'Gemini 1.5 Pro',
@@ -129,14 +156,6 @@ export const CLOUD_MODELS = {
     provider: 'Google',
     inputCostPer1M: 1.25,
     outputCostPer1M: 5.00,
-    badgeColor: '#3b82f6'
-  },
-  'gemini-1-5-flash': {
-    name: 'Gemini 1.5 Flash',
-    company: 'Google',
-    provider: 'Google',
-    inputCostPer1M: 0.075,
-    outputCostPer1M: 0.30,
     badgeColor: '#3b82f6'
   }
 };
