@@ -8,10 +8,10 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=nodedotjs&logoColor=white)](package.json)
 [![OpenWebUI](https://img.shields.io/badge/OpenWebUI-Compatible-6366F1)](https://github.com/open-webui/open-webui)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
-[![Style: Glassmorphic](https://img.shields.io/badge/Style-Glassmorphism-a855f7)](#-design--ui)
+[![Style: Glassmorphic](https://img.shields.io/badge/Style-Glassmorphism-a855f7)](#-highlights--features)
 
 <p align="center">
-  <b>TokenTill</b> is a modern, self-hosted web application that connects to your <a href="https://github.com/open-webui/open-webui">OpenWebUI</a> instance, calculates your prompt and completion token consumption across all models, and visualizes exactly how much money you save by running local AI vs. proprietary cloud models like <b>ChatGPT (OpenAI)</b> and <b>Claude (Anthropic)</b>.
+  <b>TokenTill</b> is a modern, self-hosted web application that connects to your <a href="https://github.com/open-webui/open-webui">OpenWebUI</a> instance, calculates prompt and completion token consumption across all models and users, and visualizes exactly how much money you save by running local AI vs. proprietary cloud models from <b>ChatGPT (OpenAI)</b>, <b>Claude (Anthropic)</b>, and <b>Gemini (Google)</b>.
 </p>
 
 </div>
@@ -20,24 +20,24 @@
 
 ## 🌟 Highlights & Features
 
-- 💎 **Modern Glassmorphism UI**: Multi-layered frosted glass panels (`backdrop-filter: blur(20px)`), ambient neon light orbs, and crisp typography.
-- 🛑 **Strict Zero-Lift Hover Effect**: Completely stationary layout—hover states use gentle frosted border illumination and color glow transitions without any box lifting or `translateY` elevation.
-- ⚡ **Backend Environment Persistence**: Store your OpenWebUI URL and API key in `.env` so all devices on your local network connect immediately without re-entering credentials.
-- 📅 **Dynamic Time Period Filters**: Instantly toggle between **All Time**, **Today**, **Last 7 Days**, **Last 30 Days**, or pick a **Custom Date Range** with calendar pickers.
-- 📊 **Multi-Cloud Model Pricing Engine**: Compare your local savings ($0 cost) in real-time against:
-  - **Anthropic**: Claude 3.7 Sonnet, Claude 3.5 Sonnet, Claude 3.5 Haiku, Claude 3 Opus
-  - **OpenAI**: ChatGPT (GPT-4o), GPT-4o mini, GPT-4 Turbo, OpenAI o1, OpenAI o3-mini
-  - **Google**: Gemini 1.5 Pro, Gemini 2.0 Flash
-  - **DeepSeek Cloud**: DeepSeek-R1 API
+- 💎 **Modern Glassmorphism UI**: Multi-layered frosted glass panels (`backdrop-filter: blur(20px)`), ambient neon glow orbs, and crisp typography.
+- 🛑 **Strict Zero-Lift Hover Effect**: Completely stationary layout—hover states use gentle frosted border illumination and glowing backlights without box elevation or `translateY` jumps.
+- 👥 **Multi-User Admin Sync & Filtering**: Automatically retrieves conversations across all registered users on your OpenWebUI instance (`/api/v1/chats/all/db` and `/api/v1/users/`). Filter the dashboard by individual user or view instance-wide analytics.
+- 🔒 **Complete API Key Security & Isolation**: Credentials reside strictly on the server (`.env` or Docker environment variables). Keys are never returned to clients, eliminating credential leakage.
+- 🛡️ **Server-Side Privacy Masking**: Optional configurable masking for usernames (e.g. `Chuck Lindblom` ➔ `Ch*** Li******`) and conversation topics (e.g. `compression - gzip/tar` ➔ `compression •••••••••`) before transmitting over the wire.
+- 📅 **Dynamic Time Period Filters**: Instantly filter between **All Time**, **Today**, **Last 7 Days**, **Last 30 Days**, or pick a **Custom Date Range** with calendar date pickers.
+- 📊 **Frontier Multi-Cloud Pricing Engine**: Compare your local $0 cost in real-time against current frontier models:
+  - **OpenAI (ChatGPT)**: GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna, OpenAI o1, o3-mini, GPT-4.5 Preview, GPT-4o, GPT-4o mini.
+  - **Anthropic (Claude)**: Claude Mythos 5, Claude Opus 5, Claude Sonnet 5, Claude Haiku 4.5, Claude 3.7 Sonnet, Claude 3.5 Sonnet, Claude 3 Opus.
+  - **Google (Gemini)**: Gemini 3.7 Flash, Gemini 3.1 Pro, Gemini 3.5 Flash, Gemini 3.5 Flash-Lite, Gemini 2.0 Flash, Gemini 1.5 Pro.
   - **Custom Rates**: Configure your own custom prompt and completion $/1M token rates.
 - 📈 **Interactive Visual Analytics (Chart.js)**:
   - **Cumulative Savings Timeline**: Area chart tracking your dollar savings over time.
-  - **Local Model Distribution**: Doughnut breakdown showing token share per local model (e.g. Llama 3, DeepSeek-R1, Qwen 2.5, Gemma).
+  - **Local Model Distribution**: Doughnut breakdown showing token share per local model.
   - **Cloud Cost Comparison**: Bar chart comparing local $0 vs equivalent cloud API expenses.
   - **Daily Activity**: Stacked bar chart showing daily input vs output token volume.
-- 🔍 **Searchable & Filterable Chat History**: Search conversation topics, filter by model, inspect exact input/output tokens, and see calculated savings per query.
+- 🔍 **Searchable & Filterable Chat History**: Search conversation topics, filter by model, filter by user, inspect exact input/output tokens, and see calculated savings per query.
 - 📦 **Docker & Proxmox Ready**: Minimal production multi-stage `Dockerfile` and `docker-compose.yml` for 1-command deployment.
-- 🔒 **100% Private & Local**: Zero external telemetry. All calculations run strictly on your server.
 
 ---
 
@@ -47,8 +47,8 @@ The fastest way to deploy **TokenTill** in your home lab or server:
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/your-username/ai-token-use.git tokentill
-cd tokentill
+git clone https://github.com/BearDooks/TokenTill.git
+cd TokenTill
 ```
 
 ### 2. Configure Environment Variables
@@ -70,25 +70,29 @@ PORT=3001
 
 # In-memory Cache Duration in minutes
 CACHE_TTL_MINUTES=5
+
+# Optional Privacy Masking (true / false)
+MASK_USER_NAMES=false
+MASK_CHAT_TITLES=false
 ```
 
 > **How to get your OpenWebUI API Key:**
 > 1. Open your OpenWebUI interface.
 > 2. Go to **Settings** > **Account**.
-> 3. Under **API Keys**, generate and copy your key.
+> 3. Under **API Keys**, generate and copy your admin or user API key.
 
 ### 3. Launch with Docker Compose
 ```bash
 docker compose up -d --build
 ```
 
-Open **`http://localhost:3001`** (or `http://<your-server-ip>:3001`) in your browser!
+Open **`http://localhost:3001`** (or `http://<your-server-ip>:3001`) in your browser.
 
 ---
 
 ## 🛠️ Running with Node.js
 
-If you prefer running directly with Node (v18+ or v20+ recommended):
+If you prefer running directly with Node.js (v18+ or v20+):
 
 ```bash
 # 1. Install dependencies
@@ -103,7 +107,6 @@ npm start
 
 ### Development Mode (with Hot-Reload):
 ```bash
-# Run the Vite dev server on port 5173
 npm run dev
 ```
 
@@ -111,7 +114,7 @@ npm run dev
 
 ## ⚙️ Configuration Reference
 
-All settings can be configured via environment variables in `docker-compose.yml` or a `.env` file in the root directory:
+All settings can be configured via environment variables in `docker-compose.yml` or a `.env` file:
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
