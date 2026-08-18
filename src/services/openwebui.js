@@ -29,29 +29,68 @@ export function estimateTokens(text) {
  * Extract token counts from OpenWebUI message object
  */
 export function extractMessageTokens(msg) {
+  if (!msg || typeof msg !== 'object') return { promptTokens: 0, completionTokens: 0 };
+
   let promptTokens = 0;
   let completionTokens = 0;
 
-  // Check usage dictionary in message
-  if (msg.usage) {
-    promptTokens = msg.usage.prompt_tokens || msg.usage.prompt_eval_count || 0;
-    completionTokens = msg.usage.completion_tokens || msg.usage.eval_count || 0;
+  // 1. Check msg.info (OpenWebUI / Ollama / llama.cpp standard)
+  if (msg.info && typeof msg.info === 'object') {
+    if (msg.info.prompt_eval_count !== undefined) promptTokens = Number(msg.info.prompt_eval_count) || 0;
+    if (msg.info.eval_count !== undefined) completionTokens = Number(msg.info.eval_count) || 0;
+    if (msg.info.promptEvalCount !== undefined) promptTokens = promptTokens || (Number(msg.info.promptEvalCount) || 0);
+    if (msg.info.evalCount !== undefined) completionTokens = completionTokens || (Number(msg.info.evalCount) || 0);
+    if (msg.info.prompt_tokens !== undefined) promptTokens = promptTokens || (Number(msg.info.prompt_tokens) || 0);
+    if (msg.info.completion_tokens !== undefined) completionTokens = completionTokens || (Number(msg.info.completion_tokens) || 0);
+
+    if (msg.info.usage && typeof msg.info.usage === 'object') {
+      promptTokens = promptTokens || Number(msg.info.usage.prompt_tokens || msg.info.usage.prompt_eval_count || 0);
+      completionTokens = completionTokens || Number(msg.info.usage.completion_tokens || msg.info.usage.eval_count || 0);
+    }
   }
 
-  // Check Ollama/OpenWebUI direct eval properties
-  if (msg.prompt_eval_count !== undefined) {
-    promptTokens = msg.prompt_eval_count || 0;
-  }
-  if (msg.eval_count !== undefined) {
-    completionTokens = msg.eval_count || 0;
+  // 2. Check msg.usage (OpenAI / LiteLLM / generic format)
+  if (msg.usage && typeof msg.usage === 'object') {
+    promptTokens = promptTokens || Number(msg.usage.prompt_tokens || msg.usage.prompt_eval_count || 0);
+    completionTokens = completionTokens || Number(msg.usage.completion_tokens || msg.usage.eval_count || 0);
   }
 
-  // Fallback estimation if zero or missing
-  if (promptTokens === 0 && completionTokens === 0 && msg.content) {
-    if (msg.role === 'user' || msg.role === 'system') {
-      promptTokens = estimateTokens(msg.content);
+  // 3. Check direct properties on msg
+  if (msg.prompt_eval_count !== undefined) promptTokens = promptTokens || Number(msg.prompt_eval_count) || 0;
+  if (msg.eval_count !== undefined) completionTokens = completionTokens || Number(msg.eval_count) || 0;
+  if (msg.prompt_tokens !== undefined) promptTokens = promptTokens || Number(msg.prompt_tokens) || 0;
+  if (msg.completion_tokens !== undefined) completionTokens = completionTokens || Number(msg.completion_tokens) || 0;
+
+  // 4. Check msg.meta / msg.metadata
+  const meta = msg.meta || msg.metadata;
+  if (meta && typeof meta === 'object') {
+    promptTokens = promptTokens || Number(meta.prompt_eval_count || meta.prompt_tokens || meta.usage?.prompt_tokens || 0);
+    completionTokens = completionTokens || Number(meta.eval_count || meta.completion_tokens || meta.usage?.completion_tokens || 0);
+  }
+
+  // 5. Fallback estimation from content text if tokens are 0
+  const role = (msg.role || '').toLowerCase();
+  let text = '';
+  if (typeof msg.content === 'string') {
+    text = msg.content;
+  } else if (Array.isArray(msg.content)) {
+    text = msg.content.map(part => {
+      if (typeof part === 'string') return part;
+      if (part && typeof part === 'object' && part.text) return part.text;
+      return '';
+    }).join(' ');
+  } else if (typeof msg.text === 'string') {
+    text = msg.text;
+  } else if (typeof msg.response === 'string') {
+    text = msg.response;
+  }
+
+  if (text && text.trim().length > 0) {
+    const estimated = estimateTokens(text);
+    if (role === 'user' || role === 'system') {
+      if (promptTokens === 0) promptTokens = estimated;
     } else {
-      completionTokens = estimateTokens(msg.content);
+      if (completionTokens === 0) completionTokens = estimated;
     }
   }
 
@@ -204,22 +243,43 @@ export function parseSingleChat(chatData) {
   let modelsUsed = new Set();
   let messageCount = 0;
 
-  // Extract messages from various OpenWebUI schemas
-  let messages = [];
-  if (chatData.chat && Array.isArray(chatData.chat.messages)) {
-    messages = chatData.chat.messages;
-  } else if (Array.isArray(chatData.messages)) {
-    messages = chatData.messages;
-  } else if (chatData.chat && chatData.chat.history && chatData.chat.history.messages) {
-    messages = Object.values(chatData.chat.history.messages);
+  // Handle stringified JSON in chatData.chat (e.g. from SQLite / DB)
+  let chatObj = chatData.chat;
+  if (typeof chatObj === 'string') {
+    try {
+      chatObj = JSON.parse(chatObj);
+    } catch (e) {
+      chatObj = null;
+    }
   }
 
-  // Also check top-level models array
-  if (chatData.models && Array.isArray(chatData.models)) {
-    chatData.models.forEach(m => modelsUsed.add(m));
+  // Extract messages - check OpenWebUI history dictionary first (full conversation tree)
+  let messages = [];
+  if (chatObj && chatObj.history && chatObj.history.messages && typeof chatObj.history.messages === 'object') {
+    messages = Object.values(chatObj.history.messages);
+  } else if (chatData.history && chatData.history.messages && typeof chatData.history.messages === 'object') {
+    messages = Object.values(chatData.history.messages);
   }
-  if (chatData.chat && chatData.chat.models && Array.isArray(chatData.chat.models)) {
-    chatData.chat.models.forEach(m => modelsUsed.add(m));
+
+  if (messages.length === 0) {
+    if (chatObj && Array.isArray(chatObj.messages)) {
+      messages = chatObj.messages;
+    } else if (Array.isArray(chatData.messages)) {
+      messages = chatData.messages;
+    }
+  } else if (chatObj && Array.isArray(chatObj.messages) && chatObj.messages.length > messages.length) {
+    messages = chatObj.messages;
+  }
+
+  // Also check models
+  if (chatData.models && Array.isArray(chatData.models)) {
+    chatData.models.forEach(m => m && modelsUsed.add(m));
+  }
+  if (chatObj && chatObj.models && Array.isArray(chatObj.models)) {
+    chatObj.models.forEach(m => m && modelsUsed.add(m));
+  }
+  if (chatObj && chatObj.model) {
+    modelsUsed.add(chatObj.model);
   }
 
   if (messages.length > 0) {
@@ -227,6 +287,7 @@ export function parseSingleChat(chatData) {
     for (const msg of messages) {
       if (msg.model) modelsUsed.add(msg.model);
       if (msg.selectedModel) modelsUsed.add(msg.selectedModel);
+      if (msg.info && msg.info.model) modelsUsed.add(msg.info.model);
 
       const tokens = extractMessageTokens(msg);
       promptTokens += tokens.promptTokens;
@@ -234,8 +295,8 @@ export function parseSingleChat(chatData) {
     }
   }
 
-  // If still 0 tokens, make an estimation based on title length or default minimum
-  if (promptTokens === 0 && completionTokens === 0) {
+  // If still 0 tokens and no messages, make default estimation
+  if (promptTokens === 0 && completionTokens === 0 && messages.length === 0) {
     promptTokens = 120;
     completionTokens = 280;
   }
