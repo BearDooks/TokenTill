@@ -12,9 +12,10 @@ let appState = {
   allChats: [], // Complete master history from OpenWebUI
   chats: [],    // Filtered by active time range
   timeRange: 'all', // 'all' | 'today' | '7d' | '30d' | 'custom'
+  companyFilter: 'all', // 'all' | 'Anthropic' | 'OpenAI' | 'Google'
   customStartDate: '',
   customEndDate: '',
-  selectedBaseline: 'claude-3-5-sonnet',
+  selectedBaseline: 'claude-3-7-sonnet',
   customRates: {
     name: 'Custom Model',
     inputRate: 3.00,
@@ -91,6 +92,17 @@ function initEventListeners() {
         customControls.classList.remove('active');
         applyTimeFilter();
       }
+    });
+  });
+
+  // Company Filter Buttons (Claude, ChatGPT, Gemini)
+  const companyButtons = document.querySelectorAll('#company-filter-buttons .time-pill-btn');
+  companyButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      companyButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      appState.companyFilter = btn.getAttribute('data-company');
+      renderModelPills();
     });
   });
 
@@ -384,7 +396,7 @@ function updateConnectionBadge(status, label) {
 }
 
 /**
- * Render Baseline Model Pills
+ * Render Baseline Model Pills filtered by selected company
  */
 function renderModelPills() {
   const container = document.getElementById('model-pills-container');
@@ -397,22 +409,34 @@ function renderModelPills() {
   if (appState.customRates) {
     allModels['custom'] = {
       name: appState.customRates.name || 'Custom Rates',
+      company: 'Custom',
       provider: 'Custom',
       inputCostPer1M: appState.customRates.inputRate,
       outputCostPer1M: appState.customRates.outputRate
     };
   }
 
+  const selectedCompany = appState.companyFilter;
+
   for (const [key, model] of Object.entries(allModels)) {
+    // Filter by company unless 'all'
+    if (selectedCompany !== 'all' && model.company !== selectedCompany && model.company !== 'Custom') {
+      continue;
+    }
+
     const isSelected = appState.selectedBaseline === key;
     const cost = calculateModelCost(currentTotalPrompt, currentTotalComp, key, appState.customRates);
+
+    const tagBadge = model.tag 
+      ? `<span style="font-size:0.65rem; background:rgba(99,102,241,0.25); border: 1px solid rgba(99,102,241,0.4); padding:1px 6px; border-radius:4px; color:#c7d2fe;">${model.tag}</span>` 
+      : (model.popular ? '<span style="font-size:0.65rem; background:rgba(16,185,129,0.25); border: 1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:4px; color:#6ee7b7;">POPULAR</span>' : '');
 
     const pill = document.createElement('div');
     pill.className = `model-pill-btn ${isSelected ? 'selected' : ''}`;
     pill.innerHTML = `
       <div class="model-pill-name">
         <span>${model.name}</span>
-        ${model.popular ? '<span style="font-size:0.65rem; background:rgba(99,102,241,0.3); padding:1px 6px; border-radius:4px; color:#c7d2fe;">POPULAR</span>' : ''}
+        ${tagBadge}
       </div>
       <div class="model-pill-rates">$${model.inputCostPer1M.toFixed(2)} in / $${model.outputCostPer1M.toFixed(2)} out per 1M</div>
       <div class="model-pill-savings">$${cost.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Saved</div>

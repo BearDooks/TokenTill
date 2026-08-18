@@ -1,16 +1,27 @@
+// Provider Definitions
+export const PROVIDERS = [
+  { id: 'all', name: 'All Companies', badgeColor: '#6366f1' },
+  { id: 'Anthropic', name: 'Claude (Anthropic)', badgeColor: '#d97706' },
+  { id: 'OpenAI', name: 'ChatGPT (OpenAI)', badgeColor: '#10b981' },
+  { id: 'Google', name: 'Gemini (Google)', badgeColor: '#3b82f6' }
+];
+
 // Cloud AI Pricing Database (per 1 Million tokens in USD)
 export const CLOUD_MODELS = {
-  // Anthropic Claude
+  // --- Anthropic (Claude) ---
   'claude-3-7-sonnet': {
     name: 'Claude 3.7 Sonnet',
+    company: 'Anthropic',
     provider: 'Anthropic',
     inputCostPer1M: 3.00,
     outputCostPer1M: 15.00,
     badgeColor: '#d97706',
-    popular: true
+    popular: true,
+    tag: 'Latest'
   },
   'claude-3-5-sonnet': {
     name: 'Claude 3.5 Sonnet',
+    company: 'Anthropic',
     provider: 'Anthropic',
     inputCostPer1M: 3.00,
     outputCostPer1M: 15.00,
@@ -19,81 +30,114 @@ export const CLOUD_MODELS = {
   },
   'claude-3-5-haiku': {
     name: 'Claude 3.5 Haiku',
+    company: 'Anthropic',
     provider: 'Anthropic',
     inputCostPer1M: 0.80,
     outputCostPer1M: 4.00,
-    badgeColor: '#d97706'
+    badgeColor: '#d97706',
+    tag: 'Fast'
   },
   'claude-3-opus': {
     name: 'Claude 3 Opus',
+    company: 'Anthropic',
     provider: 'Anthropic',
     inputCostPer1M: 15.00,
     outputCostPer1M: 75.00,
     badgeColor: '#b45309'
   },
 
-  // OpenAI ChatGPT
+  // --- OpenAI (ChatGPT) ---
   'gpt-4o': {
     name: 'ChatGPT (GPT-4o)',
+    company: 'OpenAI',
     provider: 'OpenAI',
     inputCostPer1M: 2.50,
     outputCostPer1M: 10.00,
     badgeColor: '#10b981',
-    popular: true
+    popular: true,
+    tag: 'Flagship'
   },
   'gpt-4o-mini': {
     name: 'ChatGPT (GPT-4o mini)',
+    company: 'OpenAI',
     provider: 'OpenAI',
     inputCostPer1M: 0.15,
     outputCostPer1M: 0.60,
     badgeColor: '#10b981',
-    popular: true
+    popular: true,
+    tag: 'Efficient'
+  },
+  'openai-o3-mini': {
+    name: 'OpenAI o3-mini',
+    company: 'OpenAI',
+    provider: 'OpenAI',
+    inputCostPer1M: 1.10,
+    outputCostPer1M: 4.40,
+    badgeColor: '#10b981',
+    tag: 'Reasoning'
+  },
+  'openai-o1': {
+    name: 'OpenAI o1',
+    company: 'OpenAI',
+    provider: 'OpenAI',
+    inputCostPer1M: 15.00,
+    outputCostPer1M: 60.00,
+    badgeColor: '#059669',
+    tag: 'Deep Think'
+  },
+  'gpt-4-5-preview': {
+    name: 'GPT-4.5 Preview',
+    company: 'OpenAI',
+    provider: 'OpenAI',
+    inputCostPer1M: 75.00,
+    outputCostPer1M: 150.00,
+    badgeColor: '#059669',
+    tag: 'Research'
   },
   'gpt-4-turbo': {
     name: 'GPT-4 Turbo',
+    company: 'OpenAI',
     provider: 'OpenAI',
     inputCostPer1M: 10.00,
     outputCostPer1M: 30.00,
     badgeColor: '#059669'
   },
-  'openai-o1': {
-    name: 'OpenAI o1',
-    provider: 'OpenAI',
-    inputCostPer1M: 15.00,
-    outputCostPer1M: 60.00,
-    badgeColor: '#059669'
-  },
-  'openai-o3-mini': {
-    name: 'OpenAI o3-mini',
-    provider: 'OpenAI',
-    inputCostPer1M: 1.10,
-    outputCostPer1M: 4.40,
-    badgeColor: '#10b981'
-  },
 
-  // Google Gemini
+  // --- Google (Gemini) ---
+  'gemini-2-0-flash': {
+    name: 'Gemini 2.0 Flash',
+    company: 'Google',
+    provider: 'Google',
+    inputCostPer1M: 0.10,
+    outputCostPer1M: 0.40,
+    badgeColor: '#3b82f6',
+    popular: true,
+    tag: 'Latest Gen'
+  },
+  'gemini-2-0-pro-exp': {
+    name: 'Gemini 2.0 Pro (Exp)',
+    company: 'Google',
+    provider: 'Google',
+    inputCostPer1M: 1.25,
+    outputCostPer1M: 5.00,
+    badgeColor: '#3b82f6',
+    tag: 'Next-Gen'
+  },
   'gemini-1-5-pro': {
     name: 'Gemini 1.5 Pro',
+    company: 'Google',
     provider: 'Google',
     inputCostPer1M: 1.25,
     outputCostPer1M: 5.00,
     badgeColor: '#3b82f6'
   },
-  'gemini-2-0-flash': {
-    name: 'Gemini 2.0 Flash',
+  'gemini-1-5-flash': {
+    name: 'Gemini 1.5 Flash',
+    company: 'Google',
     provider: 'Google',
-    inputCostPer1M: 0.10,
-    outputCostPer1M: 0.40,
+    inputCostPer1M: 0.075,
+    outputCostPer1M: 0.30,
     badgeColor: '#3b82f6'
-  },
-
-  // DeepSeek Cloud
-  'deepseek-r1-cloud': {
-    name: 'DeepSeek-R1 (API)',
-    provider: 'DeepSeek',
-    inputCostPer1M: 0.55,
-    outputCostPer1M: 2.19,
-    badgeColor: '#8b5cf6'
   }
 };
 
@@ -139,6 +183,7 @@ export function calculateAllModelCosts(promptTokens, completionTokens, customRat
     const customCost = calculateModelCost(promptTokens, completionTokens, 'custom', customRates);
     results['custom'] = {
       name: customRates.name || 'Custom Rates',
+      company: 'Custom',
       provider: 'Custom',
       inputCostPer1M: customRates.inputRate,
       outputCostPer1M: customRates.outputRate,

@@ -210,7 +210,13 @@
           <i data-lucide="scale" style="width: 18px; height: 18px; color: #a855f7;"></i>
           <span>Comparison Baseline Model</span>
         </div>
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <div class="time-pill-group" id="company-filter-buttons">
+            <button type="button" class="time-pill-btn active" data-company="all">All Companies</button>
+            <button type="button" class="time-pill-btn" data-company="Anthropic">Claude</button>
+            <button type="button" class="time-pill-btn" data-company="OpenAI">ChatGPT</button>
+            <button type="button" class="time-pill-btn" data-company="Google">Gemini</button>
+          </div>
           <button id="btn-open-custom-modal" class="btn btn-glass btn-sm">
             <i data-lucide="sliders" style="width: 14px; height: 14px;"></i>
             <span>Custom Pricing</span>
