@@ -33,60 +33,40 @@ export function extractTextFromMessage(msg) {
   if (typeof msg === 'string') return msg;
 
   const texts = [];
-
-  // Direct string fields
-  if (typeof msg.content === 'string') texts.push(msg.content);
-  if (typeof msg.text === 'string') texts.push(msg.text);
-  if (typeof msg.response === 'string') texts.push(msg.response);
-  if (typeof msg.output === 'string') texts.push(msg.output);
-  if (typeof msg.answer === 'string') texts.push(msg.answer);
-  if (typeof msg.thought === 'string') texts.push(msg.thought);
-  if (typeof msg.reasoning_content === 'string') texts.push(msg.reasoning_content);
-  if (typeof msg.thinking === 'string') texts.push(msg.thinking);
-
-  // Content is object or array
-  if (msg.content && typeof msg.content === 'object') {
-    if (Array.isArray(msg.content)) {
-      msg.content.forEach(part => {
-        if (typeof part === 'string') texts.push(part);
-        else if (part && typeof part === 'object') {
-          if (typeof part.text === 'string') texts.push(part.text);
-          if (typeof part.content === 'string') texts.push(part.content);
-          if (typeof part.value === 'string') texts.push(part.value);
-        }
-      });
-    } else {
-      if (typeof msg.content.text === 'string') texts.push(msg.content.text);
-      if (typeof msg.content.value === 'string') texts.push(msg.content.value);
-      if (msg.content.parts) {
-        const parts = Array.isArray(msg.content.parts) ? msg.content.parts : Object.values(msg.content.parts);
-        parts.forEach(p => {
-          if (typeof p === 'string') texts.push(p);
-          else if (p && typeof p.text === 'string') texts.push(p.text);
-        });
-      }
+  const addText = (val) => {
+    if (!val) return;
+    if (typeof val === 'string') {
+      const trimmed = val.trim();
+      if (trimmed) texts.push(trimmed);
+    } else if (Array.isArray(val)) {
+      val.forEach(addText);
+    } else if (typeof val === 'object') {
+      if (val.text) addText(val.text);
+      if (val.content) addText(val.content);
+      if (val.value) addText(val.value);
+      if (val.thought) addText(val.thought);
+      if (val.reasoning_content) addText(val.reasoning_content);
+      if (val.thinking) addText(val.thinking);
+      if (val.response) addText(val.response);
+      if (val.output) addText(val.output);
+      if (val.answer) addText(val.answer);
+      if (val.parts) addText(val.parts);
+      if (val.message) addText(val.message);
     }
-  }
+  };
 
-  // Nested message object (OpenAI / OpenWebUI format)
-  if (msg.message) {
-    if (typeof msg.message === 'string') texts.push(msg.message);
-    else if (typeof msg.message === 'object') {
-      if (typeof msg.message.content === 'string') texts.push(msg.message.content);
-      if (typeof msg.message.text === 'string') texts.push(msg.message.text);
-      if (typeof msg.message.thought === 'string') texts.push(msg.message.thought);
-    }
-  }
+  addText(msg.content);
+  addText(msg.text);
+  addText(msg.response);
+  addText(msg.output);
+  addText(msg.answer);
+  addText(msg.thought);
+  addText(msg.reasoning_content);
+  addText(msg.thinking);
+  if (msg.message) addText(msg.message);
+  if (msg.choices) addText(msg.choices);
 
-  // Choices array format
-  if (Array.isArray(msg.choices)) {
-    msg.choices.forEach(c => {
-      if (c && c.message && typeof c.message.content === 'string') texts.push(c.message.content);
-      if (c && typeof c.text === 'string') texts.push(c.text);
-    });
-  }
-
-  return texts.filter(Boolean).join('\n').trim();
+  return texts.join('\n').trim();
 }
 
 /**
@@ -329,13 +309,15 @@ export function parseSingleChat(chatData) {
   if (chatObj && chatObj.chat && chatObj.chat.history && chatObj.chat.history.messages) addMessages(chatObj.chat.history.messages);
   if (chatObj && chatObj.chat && chatObj.chat.messages) addMessages(chatObj.chat.messages);
 
-  // Deduplicate messages by id or content signature
-  const seenIds = new Set();
+  // Deduplicate messages without dropping messages that share a chat ID
+  const seenKeys = new Set();
   const messages = [];
   for (const m of messagePool) {
-    const uniqueKey = m.id || `${m.role || 'msg'}_${m.timestamp || ''}_${(m.content || '').slice ? m.content.slice(0, 30) : ''}`;
-    if (!seenIds.has(uniqueKey)) {
-      seenIds.add(uniqueKey);
+    const textPreview = extractTextFromMessage(m).slice(0, 60);
+    // Key combines id, role, timestamp and content preview to avoid dropping different messages with shared chat id
+    const uniqueKey = `${m.id || ''}_${m.role || ''}_${m.timestamp || ''}_${textPreview}`;
+    if (!seenKeys.has(uniqueKey)) {
+      seenKeys.add(uniqueKey);
       messages.push(m);
     }
   }
