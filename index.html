@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TokenTill - OpenWebUI AI Token & Savings Tracker</title>
+  <meta name="description" content="Self-hosted token usage and cost savings tracker for OpenWebUI vs ChatGPT & Claude.">
+  <link rel="stylesheet" href="/src/styles/glassmorphism.css">
+</head>
+<body>
+  <!-- Ambient background lighting orbs -->
+  <div class="ambient-glow">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+  </div>
+
+  <div class="app-container">
+    <!-- Main Glass Header -->
+    <header class="glass-panel app-header">
+      <div class="brand-section">
+        <div class="brand-icon-box">
+          <i data-lucide="cpu" style="width: 24px; height: 24px;"></i>
+        </div>
+        <div>
+          <h1 class="brand-title">TokenTill</h1>
+          <p class="brand-subtitle">Self-Hosted OpenWebUI Token & Savings Intelligence</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btn-sync-now" class="btn btn-primary" title="Fetch latest token data from OpenWebUI">
+          <i data-lucide="refresh-cw" id="sync-icon" style="width: 16px; height: 16px;"></i>
+          <span id="sync-button-text">Sync Now</span>
+        </button>
+
+        <label for="file-export-input" class="btn btn-glass" title="Upload OpenWebUI chat export JSON">
+          <i data-lucide="upload-cloud" style="width: 16px; height: 16px; color: #a78bfa;"></i>
+          <span>Import JSON</span>
+        </label>
+        <input type="file" id="file-export-input" class="file-input-hidden" accept=".json">
+      </div>
+    </header>
+
+    <!-- Connection & Backend Status Banner -->
+    <section class="glass-panel connection-panel">
+      <div class="connection-header">
+        <div class="section-title">
+          <i data-lucide="server" style="width: 18px; height: 18px; color: #6366f1;"></i>
+          <span id="connection-title">Backend OpenWebUI Connection</span>
+        </div>
+        <div id="connection-badge" class="status-badge disconnected">
+          <span class="status-dot"></span>
+          <span id="connection-status-text">Checking backend...</span>
+        </div>
+      </div>
+
+      <!-- Backend Preconfigured View -->
+      <div id="backend-configured-view" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div style="font-size: 0.88rem; color: var(--text-secondary);">
+            Connected to <strong id="target-instance-url" style="color: #c7d2fe; font-family: 'JetBrains Mono', monospace;">http://localhost:3000</strong> using backend API credentials.
+          </div>
+          <div id="cache-status-info" style="font-size: 0.80rem; color: var(--text-muted);">
+            Last updated: <span id="last-sync-time">Never</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Backend Unconfigured / Manual Setup View -->
+      <div id="backend-unconfigured-view">
+        <div style="margin-bottom: 12px; font-size: 0.86rem; color: var(--text-secondary);">
+          <span style="color: #f59e0b;">Tip:</span> Set <code style="color: #67e8f9; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">OPENWEBUI_API_KEY</code> and <code style="color: #67e8f9; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">OPENWEBUI_URL</code> in your <code style="color: #a5b4fc; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">.env</code> file or Docker environment to automatically load on start, or enter credentials below:
+        </div>
+        <form id="connection-form" class="connection-form">
+          <div class="input-group">
+            <div class="input-icon">
+              <i data-lucide="globe" style="width: 16px; height: 16px;"></i>
+            </div>
+            <input 
+              type="text" 
+              id="input-server-url" 
+              class="glass-input" 
+              placeholder="http://localhost:3000 or http://192.168.1.x:8080"
+              value="http://localhost:3000"
+            >
+          </div>
+
+          <div class="input-group">
+            <div class="input-icon">
+              <i data-lucide="key" style="width: 16px; height: 16px;"></i>
+            </div>
+            <input 
+              type="password" 
+              id="input-api-key" 
+              class="glass-input" 
+              placeholder="OpenWebUI API Key (Settings > Account > API Keys)"
+              autocomplete="off"
+            >
+          </div>
+
+          <button type="submit" id="btn-connect" class="btn btn-primary">
+            <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
+            <span>Connect & Save</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Sync Progress -->
+      <div id="sync-container" style="display: none; margin-top: 14px;">
+        <div class="sync-progress-bar">
+          <div id="sync-progress-fill" class="sync-progress-fill" style="width: 0%;"></div>
+        </div>
+        <div class="sync-status-text">
+          <span id="sync-status-msg">Fetching token usage...</span>
+          <span id="sync-percent-text">0%</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Time Period Filter Bar -->
+    <section class="glass-panel time-filter-panel">
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <div style="font-size: 0.84rem; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+          <i data-lucide="calendar" style="width: 16px; height: 16px; color: #818cf8;"></i>
+          <span>Time Period:</span>
+        </div>
+        <div class="time-pill-group" id="time-range-buttons">
+          <button type="button" class="time-pill-btn active" data-range="all">All Time</button>
+          <button type="button" class="time-pill-btn" data-range="today">Today</button>
+          <button type="button" class="time-pill-btn" data-range="7d">Last 7 Days</button>
+          <button type="button" class="time-pill-btn" data-range="30d">Last 30 Days</button>
+          <button type="button" class="time-pill-btn" data-range="custom">Custom Range</button>
+        </div>
+      </div>
+
+      <!-- Custom Date Inputs (hidden by default) -->
+      <div id="custom-date-controls" class="custom-date-container">
+        <input type="date" id="input-date-start" class="glass-date-input" title="Start Date">
+        <span style="color: var(--text-muted); font-size: 0.8rem;">to</span>
+        <input type="date" id="input-date-end" class="glass-date-input" title="End Date">
+        <button type="button" id="btn-apply-custom-date" class="btn btn-primary btn-sm">Apply</button>
+      </div>
+
+      <div id="active-range-indicator" style="font-size: 0.78rem; color: var(--text-muted);">
+        Showing all-time history
+      </div>
+    </section>
+
+    <!-- Top Headline Metric Cards -->
+    <section class="stats-grid">
+      <div class="glass-panel stat-card accent-green">
+        <div class="stat-top">
+          <span class="stat-label">Total Money Saved</span>
+          <div class="stat-icon" style="color: #34d399;">
+            <i data-lucide="dollar-sign" style="width: 20px; height: 20px;"></i>
+          </div>
+        </div>
+        <div id="stat-total-saved" class="stat-value highlight-green">$0.00</div>
+        <div class="stat-subtext">
+          <i data-lucide="shield-check" style="width: 14px; height: 14px; color: #34d399;"></i>
+          <span id="stat-baseline-label">vs Claude 3.5 Sonnet</span>
+        </div>
+      </div>
+
+      <div class="glass-panel stat-card accent-indigo">
+        <div class="stat-top">
+          <span class="stat-label">Total Tokens Processed</span>
+          <div class="stat-icon" style="color: #818cf8;">
+            <i data-lucide="layers" style="width: 20px; height: 20px;"></i>
+          </div>
+        </div>
+        <div id="stat-total-tokens" class="stat-value">0</div>
+        <div class="stat-subtext">
+          <span id="stat-token-split">Prompt: 0 | Output: 0</span>
+        </div>
+      </div>
+
+      <div class="glass-panel stat-card accent-purple">
+        <div class="stat-top">
+          <span class="stat-label">Total Conversations</span>
+          <div class="stat-icon" style="color: #c084fc;">
+            <i data-lucide="message-square" style="width: 20px; height: 20px;"></i>
+          </div>
+        </div>
+        <div id="stat-total-chats" class="stat-value">0</div>
+        <div class="stat-subtext">
+          <span id="stat-avg-tokens">Avg 0 tokens / session</span>
+        </div>
+      </div>
+
+      <div class="glass-panel stat-card accent-cyan">
+        <div class="stat-top">
+          <span class="stat-label">Avg Savings Per Query</span>
+          <div class="stat-icon" style="color: #38bdf8;">
+            <i data-lucide="trending-up" style="width: 20px; height: 20px;"></i>
+          </div>
+        </div>
+        <div id="stat-avg-savings" class="stat-value">$0.00</div>
+        <div class="stat-subtext">
+          <span id="stat-date-span">No data period</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Baseline Model Comparison Selector -->
+    <section class="glass-panel baseline-selector-card">
+      <div class="baseline-selector-header">
+        <div class="section-title">
+          <i data-lucide="scale" style="width: 18px; height: 18px; color: #a855f7;"></i>
+          <span>Comparison Baseline Model</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-open-custom-modal" class="btn btn-glass btn-sm">
+            <i data-lucide="sliders" style="width: 14px; height: 14px;"></i>
+            <span>Custom Pricing</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="model-pills-container" class="model-pill-grid">
+        <!-- Injected dynamically via JS -->
+      </div>
+    </section>
+
+    <!-- Visual Charts Grid -->
+    <section class="charts-grid">
+      <!-- Cumulative Savings Over Time -->
+      <div class="glass-panel chart-card">
+        <div class="chart-header">
+          <div class="section-title">
+            <i data-lucide="area-chart" style="width: 18px; height: 18px; color: #34d399;"></i>
+            <span>Cumulative Money Saved Over Time</span>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">
+            Timeline ($ USD)
+          </div>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="chart-savings-timeline"></canvas>
+        </div>
+      </div>
+
+      <!-- Model Token Distribution -->
+      <div class="glass-panel chart-card">
+        <div class="chart-header">
+          <div class="section-title">
+            <i data-lucide="pie-chart" style="width: 18px; height: 18px; color: #818cf8;"></i>
+            <span>Local Model Distribution</span>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">
+            Token Share
+          </div>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="chart-model-distribution"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Secondary Comparison Section -->
+    <section class="comparison-grid">
+      <!-- Cost Comparison Across Providers -->
+      <div class="glass-panel chart-card">
+        <div class="chart-header">
+          <div class="section-title">
+            <i data-lucide="bar-chart-3" style="width: 18px; height: 18px; color: #f59e0b;"></i>
+            <span>Cost If Run on Cloud Models ($ USD)</span>
+          </div>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="chart-cloud-cost-bar"></canvas>
+        </div>
+      </div>
+
+      <!-- Daily Token Activity -->
+      <div class="glass-panel chart-card">
+        <div class="chart-header">
+          <div class="section-title">
+            <i data-lucide="activity" style="width: 18px; height: 18px; color: #06b6d4;"></i>
+            <span>Daily Token Consumption (Prompt vs Output)</span>
+          </div>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="chart-daily-tokens-bar"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Detailed Chat Sessions & Savings Table -->
+    <section class="glass-panel table-panel">
+      <div class="table-header-row">
+        <div class="section-title">
+          <i data-lucide="list" style="width: 18px; height: 18px; color: #c084fc;"></i>
+          <span>Conversation History & Savings Breakdown</span>
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <div class="input-group table-search-box">
+            <div class="input-icon">
+              <i data-lucide="search" style="width: 14px; height: 14px;"></i>
+            </div>
+            <input 
+              type="text" 
+              id="input-chat-search" 
+              class="glass-input" 
+              placeholder="Search chat titles or models..."
+              style="padding: 8px 12px 8px 36px; font-size: 0.82rem;"
+            >
+          </div>
+          <select id="select-model-filter" class="glass-input" style="padding: 8px 12px; font-size: 0.82rem; width: auto;">
+            <option value="all">All Models</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="glass-table-wrapper">
+        <table class="glass-table">
+          <thead>
+            <tr>
+              <th>Conversation Title</th>
+              <th>Local Model</th>
+              <th>Prompt Tokens</th>
+              <th>Output Tokens</th>
+              <th>Total Tokens</th>
+              <th>Est. Saved</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="chats-table-body">
+            <tr>
+              <td colspan="7" class="empty-state">
+                <div class="empty-icon">
+                  <i data-lucide="inbox" style="width: 32px; height: 32px;"></i>
+                </div>
+                <div>No token records loaded yet. Click <strong>Sync Now</strong> or set your API key in <code style="color: #67e8f9;">.env</code>.</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- Custom Pricing Modal -->
+  <div id="modal-custom-pricing" class="modal-overlay">
+    <div class="modal-box">
+      <h3 class="modal-title">Custom Comparison Rates</h3>
+      <p class="modal-desc">Configure custom rates per 1 Million tokens to compare against your own custom API contracts or proprietary endpoints.</p>
+
+      <form id="form-custom-pricing" class="modal-form">
+        <div class="form-field">
+          <label class="form-label" for="custom-model-name">Preset Name</label>
+          <input type="text" id="custom-model-name" class="glass-input" value="Custom Enterprise Tier" required>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label" for="custom-input-rate">Input (Prompt) Cost per 1M Tokens ($)</label>
+          <input type="number" step="0.01" id="custom-input-rate" class="glass-input" value="3.00" required>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label" for="custom-output-rate">Output (Completion) Cost per 1M Tokens ($)</label>
+          <input type="number" step="0.01" id="custom-output-rate" class="glass-input" value="15.00" required>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="btn-close-modal" class="btn btn-glass">Cancel</button>
+          <button type="submit" class="btn btn-primary">Apply Custom Rates</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main JavaScript Application Entry -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

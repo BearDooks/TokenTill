@@ -1,0 +1,14 @@
+services:
+  tokentill:
+    build: .
+    container_name: tokentill
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3001}:3001"
+    environment:
+      - OPENWEBUI_URL=${OPENWEBUI_URL:-http://localhost:3000}
+      - OPENWEBUI_API_KEY=${OPENWEBUI_API_KEY}
+      - PORT=3001
+      - CACHE_TTL_MINUTES=${CACHE_TTL_MINUTES:-5}
+    env_file:
+      - .env
