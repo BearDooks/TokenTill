@@ -10,5 +10,7 @@ services:
       - OPENWEBUI_API_KEY=${OPENWEBUI_API_KEY}
       - PORT=3001
       - CACHE_TTL_MINUTES=${CACHE_TTL_MINUTES:-5}
+      - MASK_USER_NAMES=${MASK_USER_NAMES:-false}
+      - MASK_CHAT_TITLES=${MASK_CHAT_TITLES:-false}
     env_file:
       - .env

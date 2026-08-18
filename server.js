@@ -21,6 +21,8 @@ function cleanEnv(val, fallback = '') {
 const OPENWEBUI_URL = cleanEnv(process.env.OPENWEBUI_URL, 'http://localhost:3000').replace(/\/+$/, '');
 const OPENWEBUI_API_KEY = cleanEnv(process.env.OPENWEBUI_API_KEY, '');
 const CACHE_TTL_MS = (parseInt(process.env.CACHE_TTL_MINUTES) || 5) * 60 * 1000;
+const MASK_USER_NAMES = cleanEnv(process.env.MASK_USER_NAMES, 'false').toLowerCase() === 'true';
+const MASK_CHAT_TITLES = cleanEnv(process.env.MASK_CHAT_TITLES, 'false').toLowerCase() === 'true';
 
 app.use(cors());
 app.use(express.json());
@@ -29,6 +31,46 @@ app.use(express.json());
 let cachedData = null;
 let lastFetchTime = null;
 let isFetching = false;
+
+// Privacy Helper: Mask User Name (e.g., "Chuck Lindblom" -> "Ch*** L******", "root@local.net" -> "ro***@l***.net")
+function maskUserName(name) {
+  if (!name || typeof name !== 'string') return 'Anonymous';
+  if (!MASK_USER_NAMES) return name;
+
+  // Handle email addresses
+  if (name.includes('@')) {
+    const [user, domain] = name.split('@');
+    const maskedUser = user.length > 2 ? user.slice(0, 2) + '***' : user[0] + '***';
+    const domainParts = domain.split('.');
+    const maskedDomain = domainParts[0].length > 1 ? domainParts[0][0] + '***' : '***';
+    const tld = domainParts.slice(1).join('.');
+    return `${maskedUser}@${maskedDomain}.${tld}`;
+  }
+
+  // Handle standard names (e.g. "Chuck Lindblom" -> "Ch*** L******")
+  return name
+    .split(/\s+/)
+    .map(word => {
+      if (word.length <= 2) return word[0] + '*';
+      return word.slice(0, 2) + '*'.repeat(Math.min(6, Math.max(3, word.length - 2)));
+    })
+    .join(' ');
+}
+
+// Privacy Helper: Mask Chat Title (keeps first word, masks the rest for privacy)
+function maskChatTitle(title) {
+  if (!title || typeof title !== 'string') return 'Untitled';
+  if (!MASK_CHAT_TITLES) return title;
+
+  const words = title.trim().split(/\s+/);
+  if (words.length <= 1) {
+    return words[0].slice(0, 4) + '••••';
+  }
+
+  // Keep first word (topic category) and mask subsequent private content
+  const firstWord = words[0];
+  return `${firstWord} •••••••••`;
+}
 
 // Helper: Estimate token count (~4 chars per token)
 function estimateTokens(text) {
@@ -69,11 +111,13 @@ function parseSingleChat(chatData, userMap = {}) {
   if (!chatData) return null;
 
   const id = chatData.id || `chat_${Math.random().toString(36).slice(2, 9)}`;
-  const title = chatData.title || (chatData.chat && chatData.chat.title) || 'Untitled Conversation';
+  const rawTitle = chatData.title || (chatData.chat && chatData.chat.title) || 'Untitled Conversation';
+  const title = maskChatTitle(rawTitle);
   const userId = chatData.user_id || (chatData.chat && chatData.chat.user_id) || (chatData.user && chatData.user.id) || 'unknown';
 
   const userObj = userMap[userId] || (chatData.user ? { name: chatData.user.name, email: chatData.user.email } : null);
-  const userName = userObj ? userObj.name : (userId === 'unknown' ? 'Default User' : `User (${userId.slice(0, 6)})`);
+  const rawUserName = userObj ? userObj.name : (userId === 'unknown' ? 'Default User' : `User (${userId.slice(0, 6)})`);
+  const userName = maskUserName(rawUserName);
   const userEmail = userObj ? userObj.email : '';
 
   let timestamp = Date.now();
@@ -168,7 +212,8 @@ async function fetchFromOpenWebUI(overrideUrl = null, overrideKey = null) {
       const userList = Array.isArray(usersData) ? usersData : (usersData.users || []);
       for (const u of userList) {
         if (u && u.id) {
-          userMap[u.id] = { id: u.id, name: u.name || u.email, email: u.email, role: u.role };
+          const rawName = u.name || u.email || 'User';
+          userMap[u.id] = { id: u.id, name: maskUserName(rawName), rawName, email: u.email, role: u.role };
         }
       }
     }
@@ -259,9 +304,11 @@ app.get('/api/config', (req, res) => {
   res.json({
     isBackendConfigured: !!OPENWEBUI_API_KEY,
     openWebUiUrl: OPENWEBUI_URL,
+    maskUserNames: MASK_USER_NAMES,
+    maskChatTitles: MASK_CHAT_TITLES,
     hasCache: !!cachedData,
     lastFetchTime: lastFetchTime ? new Date(lastFetchTime).toISOString() : null,
-    totalChatsCached: cachedData ? cachedData.length : 0
+    totalChatsCached: cachedData ? (cachedData.chats ? cachedData.chats.length : cachedData.length) : 0
   });
 });
 
@@ -335,6 +382,7 @@ app.listen(PORT, () => {
   console.log(`=========================================`);
   console.log(`🚀 TokenTill Backend running on port ${PORT}`);
   console.log(`🔗 Target OpenWebUI: ${OPENWEBUI_URL}`);
-  console.log(`🔑 API Key Configured: ${OPENWEBUI_API_KEY ? 'YES (Loaded from .env)' : 'NO (Provide in .env or frontend)'}`);
+  console.log(`🔑 API Key Configured: ${OPENWEBUI_API_KEY ? 'YES (Loaded from .env / Docker)' : 'NO (Provide in .env or frontend)'}`);
+  console.log(`🔒 Privacy Masking: Users=${MASK_USER_NAMES ? 'ON' : 'OFF'}, Chat Titles=${MASK_CHAT_TITLES ? 'ON' : 'OFF'}`);
   console.log(`=========================================`);
 });

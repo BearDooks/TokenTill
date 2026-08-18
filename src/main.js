@@ -284,9 +284,20 @@ async function checkBackendStatusAndLoad() {
       }
 
       if (config.isBackendConfigured) {
+        // Clear any insecure local storage key
+        localStorage.removeItem('owui_key');
+        appState.apiKey = '';
+
         configuredView.style.display = 'block';
         unconfiguredView.style.display = 'none';
+
+        const privacyBadge = document.getElementById('privacy-mode-badge');
+        if (privacyBadge) {
+          privacyBadge.style.display = (config.maskUserNames || config.maskChatTitles) ? 'inline-flex' : 'none';
+        }
+
         updateConnectionBadge('connected', 'Self-Hosted Active');
+        initLucideIcons();
         
         // Auto-fetch data immediately
         await fetchTokenData(false);

@@ -58,8 +58,14 @@
       <!-- Backend Preconfigured View -->
       <div id="backend-configured-view" style="display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div style="font-size: 0.88rem; color: var(--text-secondary);">
-            Connected to <strong id="target-instance-url" style="color: #c7d2fe; font-family: 'JetBrains Mono', monospace;">http://localhost:3000</strong> using backend API credentials.
+          <div style="font-size: 0.88rem; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span>Connected to <strong id="target-instance-url" style="color: #c7d2fe; font-family: 'JetBrains Mono', monospace;">http://localhost:3000</strong></span>
+            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; background: rgba(16,185,129,0.12); color: #34d399; font-size: 0.75rem; border: 1px solid rgba(16,185,129,0.25);">
+              <i data-lucide="lock" style="width: 12px; height: 12px;"></i> Key Protected
+            </span>
+            <span id="privacy-mode-badge" style="display: none; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; background: rgba(168,85,247,0.15); color: #d8b4fe; font-size: 0.75rem; border: 1px solid rgba(168,85,247,0.3);">
+              <i data-lucide="shield" style="width: 12px; height: 12px;"></i> Privacy Masking Active
+            </span>
           </div>
           <div id="cache-status-info" style="font-size: 0.80rem; color: var(--text-muted);">
             Last updated: <span id="last-sync-time">Never</span>

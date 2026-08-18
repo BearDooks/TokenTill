@@ -111,14 +111,32 @@ npm run dev
 
 ## ⚙️ Configuration Reference
 
-All settings can be configured via environment variables or a `.env` file in the root directory:
+All settings can be configured via environment variables in `docker-compose.yml` or a `.env` file in the root directory:
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `OPENWEBUI_URL` | `http://localhost:3000` | Full URL to your OpenWebUI server (http/https). |
-| `OPENWEBUI_API_KEY` | *(empty)* | Bearer API token generated in OpenWebUI account settings. |
+| `OPENWEBUI_API_KEY` | *(empty)* | Admin or user Bearer API token generated in OpenWebUI account settings. Kept securely on the server and never exposed to the client. |
 | `PORT` | `3001` | Port on which the TokenTill server listens. |
 | `CACHE_TTL_MINUTES` | `5` | How long token analytics are cached in memory before fetching updates. |
+| `MASK_USER_NAMES` | `false` | When `true`, masks user names for privacy (e.g. `Chuck Lindblom` becomes `Ch*** Li******`). Users remain distinctly filterable. |
+| `MASK_CHAT_TITLES` | `false` | When `true`, masks conversation titles keeping only the first topic word (e.g. `compression •••••••••`). |
+
+---
+
+## 🔒 Security & Privacy Architecture
+
+TokenTill is designed from the ground up for privacy and self-hosted environments:
+
+1. **Zero Client-Side Key Exposure**:
+   - The `OPENWEBUI_API_KEY` is loaded strictly on the Node.js backend server (via Docker environment variables or `.env`).
+   - The backend never sends or echoes the API key to client browsers or frontend bundles.
+   - When the backend is preconfigured, all frontend API key input fields and local storage entries are permanently disabled and cleared.
+
+2. **Server-Side Privacy Masking**:
+   - When `MASK_USER_NAMES=true` or `MASK_CHAT_TITLES=true` are enabled, data is sanitized **on the backend before transmitting over the wire**.
+   - Raw private user names or sensitive prompt titles never reach the client's browser, preventing inspection via browser DevTools.
+   - Preserves user attribution and distinct sorting/filtering capabilities while protecting individual privacy.
 
 ---
 
@@ -133,21 +151,23 @@ All settings can be configured via environment variables or a `.env` file in the
 │  │  • Realtime Metrics & Savings Dashboard               │  │
 │  │  • Chart.js Interactive Visualizations                │  │
 │  │  • Time Period Filters (Today / 7D / 30D / Custom)    │  │
+│  │  • Multi-User Admin Sync & Filtering Dropdown         │  │
 │  │  • Cloud Baseline Matrix (Claude, ChatGPT, Gemini)     │  │
 │  └──────────────────────────┬────────────────────────────┘  │
 │                             │ REST API (/api/tokens)        │
 │  ┌──────────────────────────▼────────────────────────────┐  │
 │  │               Node.js / Express Backend                │  │
-│  │  • Reads .env credentials securely                    │  │
+│  │  • Reads .env credentials securely (Zero Key Leakage) │  │
 │  │  • In-Memory TTL Cache (prevents spamming OpenWebUI)  │  │
-│  │  • Token & Message Evaluator                          │  │
+│  │  • Privacy Masker (MASK_USER_NAMES / MASK_CHAT_TITLES)│  │
+│  │  • Multi-User Chat Parser & Token Evaluator           │  │
 │  └──────────────────────────┬────────────────────────────┘  │
 └─────────────────────────────┼───────────────────────────────┘
-                              │ Bearer Token Auth
+                              │ Server-Side Bearer Token Auth
                               ▼
                ┌──────────────────────────────┐
                │    OpenWebUI API Server      │
-               │   (/api/v1/chats endpoints)  │
+               │ (/api/v1/chats/all/db, users)│
                └──────────────────────────────┘
 ```
 
