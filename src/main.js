@@ -9,10 +9,12 @@ Chart.register(...registerables);
 
 // Application State
 let appState = {
-  allChats: [], // Complete master history from OpenWebUI
-  chats: [],    // Filtered by active time range
+  allChats: [], // Complete master history from OpenWebUI across all users
+  chats: [],    // Filtered by active time range and user
+  users: [],    // All registered users on OpenWebUI instance
   timeRange: 'all', // 'all' | 'today' | '7d' | '30d' | 'custom'
   companyFilter: 'all', // 'all' | 'Anthropic' | 'OpenAI' | 'Google'
+  userFilter: 'all',    // 'all' | userId
   customStartDate: '',
   customEndDate: '',
   selectedBaseline: 'claude-3-7-sonnet',
@@ -158,6 +160,14 @@ function initEventListeners() {
     renderTable();
   });
 
+  const userFilterSelect = document.getElementById('select-user-filter');
+  if (userFilterSelect) {
+    userFilterSelect.addEventListener('change', (e) => {
+      appState.userFilter = e.target.value;
+      applyTimeFilter();
+    });
+  }
+
   // Custom Pricing Modal
   const openModalBtn = document.getElementById('btn-open-custom-modal');
   const closeModalBtn = document.getElementById('btn-close-modal');
@@ -194,11 +204,12 @@ function initEventListeners() {
 }
 
 /**
- * Filter Master History by Time Range
+ * Filter Master History by Time Range and User
  */
 function applyTimeFilter() {
   const master = appState.allChats;
   const range = appState.timeRange;
+  const userFilter = appState.userFilter;
   const indicator = document.getElementById('active-range-indicator');
 
   if (!master || master.length === 0) {
@@ -209,31 +220,43 @@ function applyTimeFilter() {
   }
 
   const now = Date.now();
-  let filtered = [];
+  let filtered = [...master];
+
+  // 1. Filter by User
+  if (userFilter !== 'all') {
+    filtered = filtered.filter(c => c.userId === userFilter || c.userName === userFilter);
+  }
+
   let label = '';
 
+  // 2. Filter by Time Range
   if (range === 'all') {
-    filtered = [...master];
-    label = `Showing all ${filtered.length} conversations (All Time)`;
+    label = `Showing all ${filtered.length} conversation(s) (All Time)`;
   } else if (range === 'today') {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const startMs = startOfToday.getTime();
-    filtered = master.filter(c => c.timestamp >= startMs);
+    filtered = filtered.filter(c => c.timestamp >= startMs);
     label = `Showing ${filtered.length} conversation(s) from Today`;
   } else if (range === '7d') {
     const cutoff = now - (7 * 86400 * 1000);
-    filtered = master.filter(c => c.timestamp >= cutoff);
+    filtered = filtered.filter(c => c.timestamp >= cutoff);
     label = `Showing ${filtered.length} conversation(s) from the Last 7 Days`;
   } else if (range === '30d') {
     const cutoff = now - (30 * 86400 * 1000);
-    filtered = master.filter(c => c.timestamp >= cutoff);
+    filtered = filtered.filter(c => c.timestamp >= cutoff);
     label = `Showing ${filtered.length} conversation(s) from the Last 30 Days`;
   } else if (range === 'custom') {
     const startMs = appState.customStartDate ? new Date(appState.customStartDate + 'T00:00:00').getTime() : 0;
     const endMs = appState.customEndDate ? new Date(appState.customEndDate + 'T23:59:59').getTime() : Infinity;
-    filtered = master.filter(c => c.timestamp >= startMs && c.timestamp <= endMs);
+    filtered = filtered.filter(c => c.timestamp >= startMs && c.timestamp <= endMs);
     label = `Showing ${filtered.length} conversation(s) between ${appState.customStartDate} and ${appState.customEndDate}`;
+  }
+
+  if (userFilter !== 'all') {
+    const matchedUser = appState.users.find(u => u.id === userFilter || u.name === userFilter);
+    const userName = matchedUser ? matchedUser.name : userFilter;
+    label += ` for user ${userName}`;
   }
 
   appState.chats = filtered;
@@ -327,10 +350,11 @@ async function fetchTokenData(forceRefresh = false, overrideUrl = null, override
 
     const data = await response.json();
     appState.allChats = data.chats || [];
+    appState.users = data.users || [];
     appState.lastSyncTime = data.lastFetchTime ? new Date(data.lastFetchTime) : new Date();
 
     syncFill.style.width = '100%';
-    syncMsg.textContent = `Completed! Synced ${appState.allChats.length} total chat sessions.`;
+    syncMsg.textContent = `Completed! Synced ${appState.allChats.length} total chat sessions across ${appState.users.length || 1} user(s).`;
     syncPercent.textContent = '100%';
 
     if (lastSyncSpan) {
@@ -491,6 +515,9 @@ function updateDashboard() {
   // Update Model Filter options
   updateModelFilterDropdown(analytics.modelUsage);
 
+  // Update User Filter options
+  updateUserFilterDropdown(appState.users, analytics.userUsage);
+
   // Render Charts
   renderCharts(analytics);
 
@@ -505,6 +532,7 @@ function updateDashboard() {
 
 function updateModelFilterDropdown(modelUsage) {
   const select = document.getElementById('select-model-filter');
+  if (!select) return;
   const currentVal = select.value;
   select.innerHTML = '<option value="all">All Models</option>';
 
@@ -513,6 +541,33 @@ function updateModelFilterDropdown(modelUsage) {
     opt.value = modelKey;
     opt.textContent = `${modelKey} (${modelUsage[modelKey].chatCount})`;
     if (modelKey === currentVal) opt.selected = true;
+    select.appendChild(opt);
+  }
+}
+
+function updateUserFilterDropdown(users, userUsage = {}) {
+  const select = document.getElementById('select-user-filter');
+  if (!select) return;
+  const currentVal = appState.userFilter;
+  select.innerHTML = '<option value="all">All Users</option>';
+
+  // Combine registered users and any users found in usage
+  const userMap = new Map();
+  if (Array.isArray(users)) {
+    users.forEach(u => userMap.set(u.id, u.name || u.email));
+  }
+  if (userUsage) {
+    Object.values(userUsage).forEach(u => {
+      if (!userMap.has(u.id)) userMap.set(u.id, u.name);
+    });
+  }
+
+  for (const [userId, userName] of userMap.entries()) {
+    const opt = document.createElement('option');
+    opt.value = userId;
+    const chatCount = userUsage[userId]?.chatCount || 0;
+    opt.textContent = `${userName} (${chatCount} chats)`;
+    if (userId === currentVal) opt.selected = true;
     select.appendChild(opt);
   }
 }
@@ -755,7 +810,7 @@ function renderCharts(analytics) {
 }
 
 /**
- * Render Chat Table with Search and Model Filters
+ * Render Chat Table with Search, Model Filters, and User Attribution
  */
 function renderTable() {
   const tbody = document.getElementById('chats-table-body');
@@ -765,7 +820,8 @@ function renderTable() {
   if (appState.searchTerm) {
     filtered = filtered.filter(c => 
       c.title.toLowerCase().includes(appState.searchTerm) ||
-      (c.primaryModel && c.primaryModel.toLowerCase().includes(appState.searchTerm))
+      (c.primaryModel && c.primaryModel.toLowerCase().includes(appState.searchTerm)) ||
+      (c.userName && c.userName.toLowerCase().includes(appState.searchTerm))
     );
   }
 
@@ -776,11 +832,11 @@ function renderTable() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="empty-state">
+        <td colspan="8" class="empty-state">
           <div class="empty-icon">
             <i data-lucide="inbox" style="width: 32px; height: 32px;"></i>
           </div>
-          <div>${appState.allChats.length === 0 ? 'No token records loaded yet. Connect your OpenWebUI API or configure .env.' : 'No conversations found in the selected time period or search filter.'}</div>
+          <div>${appState.allChats.length === 0 ? 'No token records loaded yet. Connect your OpenWebUI API or configure .env.' : 'No conversations found in the selected filter.'}</div>
         </td>
       </tr>
     `;
@@ -799,8 +855,13 @@ function renderTable() {
 
     return `
       <tr>
-        <td style="font-weight: 500; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+        <td style="font-weight: 500; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
           ${escapeHtml(chat.title)}
+        </td>
+        <td>
+          <span class="model-tag" style="background: rgba(168, 85, 247, 0.15); color: #d8b4fe; border-color: rgba(168, 85, 247, 0.3);">
+            ${escapeHtml(chat.userName || 'User')}
+          </span>
         </td>
         <td><span class="model-tag">${escapeHtml(chat.primaryModel)}</span></td>
         <td class="token-mono" style="color: #a5b4fc;">${chat.promptTokens.toLocaleString()}</td>

@@ -314,6 +314,9 @@
               style="padding: 8px 12px 8px 36px; font-size: 0.82rem;"
             >
           </div>
+          <select id="select-user-filter" class="glass-input" style="padding: 8px 12px; font-size: 0.82rem; width: auto;">
+            <option value="all">All Users</option>
+          </select>
           <select id="select-model-filter" class="glass-input" style="padding: 8px 12px; font-size: 0.82rem; width: auto;">
             <option value="all">All Models</option>
           </select>
@@ -325,6 +328,7 @@
           <thead>
             <tr>
               <th>Conversation Title</th>
+              <th>User</th>
               <th>Local Model</th>
               <th>Prompt Tokens</th>
               <th>Output Tokens</th>
@@ -335,7 +339,7 @@
           </thead>
           <tbody id="chats-table-body">
             <tr>
-              <td colspan="7" class="empty-state">
+              <td colspan="8" class="empty-state">
                 <div class="empty-icon">
                   <i data-lucide="inbox" style="width: 32px; height: 32px;"></i>
                 </div>

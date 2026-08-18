@@ -65,11 +65,16 @@ function extractMessageTokens(msg) {
 }
 
 // Helper: Parse a single chat object
-function parseSingleChat(chatData) {
+function parseSingleChat(chatData, userMap = {}) {
   if (!chatData) return null;
 
   const id = chatData.id || `chat_${Math.random().toString(36).slice(2, 9)}`;
   const title = chatData.title || (chatData.chat && chatData.chat.title) || 'Untitled Conversation';
+  const userId = chatData.user_id || (chatData.chat && chatData.chat.user_id) || (chatData.user && chatData.user.id) || 'unknown';
+
+  const userObj = userMap[userId] || (chatData.user ? { name: chatData.user.name, email: chatData.user.email } : null);
+  const userName = userObj ? userObj.name : (userId === 'unknown' ? 'Default User' : `User (${userId.slice(0, 6)})`);
+  const userEmail = userObj ? userObj.email : '';
 
   let timestamp = Date.now();
   if (chatData.updated_at) {
@@ -126,6 +131,9 @@ function parseSingleChat(chatData) {
   return {
     id,
     title,
+    userId,
+    userName,
+    userEmail,
     timestamp,
     date: new Date(timestamp).toISOString(),
     primaryModel,
@@ -137,7 +145,7 @@ function parseSingleChat(chatData) {
   };
 }
 
-// Fetch all chats directly from OpenWebUI API
+// Fetch all chats directly from OpenWebUI API (Supports Admin All-Chats & Multi-User)
 async function fetchFromOpenWebUI(overrideUrl = null, overrideKey = null) {
   const targetUrl = cleanEnv(overrideUrl || OPENWEBUI_URL).replace(/\/+$/, '');
   const targetKey = cleanEnv(overrideKey || OPENWEBUI_API_KEY);
@@ -151,61 +159,99 @@ async function fetchFromOpenWebUI(overrideUrl = null, overrideKey = null) {
     'Content-Type': 'application/json'
   };
 
-  // 1. Fetch list of chats
-  let chatList = [];
+  // 1. Fetch Users map
+  const userMap = {};
   try {
-    const listRes = await fetch(`${targetUrl}/api/v1/chats/`, { headers });
-    if (listRes.ok) {
-      chatList = await listRes.json();
-    } else {
-      const listRes2 = await fetch(`${targetUrl}/api/chats`, { headers });
-      if (listRes2.ok) {
-        chatList = await listRes2.json();
-      } else {
-        throw new Error(`OpenWebUI responded with status ${listRes.status}: ${listRes.statusText}`);
+    const usersRes = await fetch(`${targetUrl}/api/v1/users/`, { headers });
+    if (usersRes.ok) {
+      const usersData = await usersRes.json();
+      const userList = Array.isArray(usersData) ? usersData : (usersData.users || []);
+      for (const u of userList) {
+        if (u && u.id) {
+          userMap[u.id] = { id: u.id, name: u.name || u.email, email: u.email, role: u.role };
+        }
       }
     }
   } catch (err) {
-    throw new Error(`Unable to connect to OpenWebUI at ${targetUrl}: ${err.message}`);
+    console.warn('[OpenWebUI Users API]: Could not fetch users list:', err.message);
   }
 
-  if (!Array.isArray(chatList)) {
-    if (chatList && Array.isArray(chatList.chats)) {
-      chatList = chatList.chats;
-    } else {
-      chatList = [];
-    }
-  }
+  // 2. Try Admin All-Chats endpoint (/api/v1/chats/all/db)
+  let parsedChats = [];
+  let fetchedViaAdminDb = false;
 
-  // 2. Fetch details for each chat in batches
-  const parsedChats = [];
-  const batchSize = 10;
-
-  for (let i = 0; i < chatList.length; i += batchSize) {
-    const batch = chatList.slice(i, i + batchSize);
-    const batchPromises = batch.map(async (chatSummary) => {
-      try {
-        const detailRes = await fetch(`${targetUrl}/api/v1/chats/${chatSummary.id}`, { headers });
-        if (detailRes.ok) {
-          const detailData = await detailRes.json();
-          return parseSingleChat(detailData || chatSummary);
-        }
-      } catch (err) {
-        // Fallback to summary
+  try {
+    const allDbRes = await fetch(`${targetUrl}/api/v1/chats/all/db`, { headers });
+    if (allDbRes.ok) {
+      const allDbData = await allDbRes.json();
+      if (Array.isArray(allDbData)) {
+        parsedChats = allDbData.map(c => parseSingleChat(c, userMap)).filter(Boolean);
+        fetchedViaAdminDb = true;
+        console.log(`[OpenWebUI Sync]: Successfully fetched ${parsedChats.length} chats across all users via admin /api/v1/chats/all/db`);
       }
-      return parseSingleChat(chatSummary);
-    });
+    }
+  } catch (err) {
+    console.warn('[OpenWebUI Admin API]: /api/v1/chats/all/db failed, trying fallback:', err.message);
+  }
 
-    const batchResults = await Promise.all(batchPromises);
-    for (const res of batchResults) {
-      if (res) parsedChats.push(res);
+  // 3. Fallback to standard chats listing if admin DB endpoint wasn't available
+  if (!fetchedViaAdminDb) {
+    let chatList = [];
+    try {
+      const listRes = await fetch(`${targetUrl}/api/v1/chats/`, { headers });
+      if (listRes.ok) {
+        chatList = await listRes.json();
+      } else {
+        const listRes2 = await fetch(`${targetUrl}/api/chats`, { headers });
+        if (listRes2.ok) {
+          chatList = await listRes2.json();
+        }
+      }
+    } catch (err) {
+      throw new Error(`Unable to connect to OpenWebUI at ${targetUrl}: ${err.message}`);
+    }
+
+    if (!Array.isArray(chatList)) {
+      if (chatList && Array.isArray(chatList.chats)) {
+        chatList = chatList.chats;
+      } else {
+        chatList = [];
+      }
+    }
+
+    const batchSize = 10;
+    for (let i = 0; i < chatList.length; i += batchSize) {
+      const batch = chatList.slice(i, i + batchSize);
+      const batchPromises = batch.map(async (chatSummary) => {
+        try {
+          const detailRes = await fetch(`${targetUrl}/api/v1/chats/${chatSummary.id}`, { headers });
+          if (detailRes.ok) {
+            const detailData = await detailRes.json();
+            return parseSingleChat(detailData || chatSummary, userMap);
+          }
+        } catch (err) {
+          // Fallback to summary
+        }
+        return parseSingleChat(chatSummary, userMap);
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      for (const res of batchResults) {
+        if (res) parsedChats.push(res);
+      }
     }
   }
 
   // Sort newest first
   parsedChats.sort((a, b) => b.timestamp - a.timestamp);
 
-  return parsedChats;
+  const usersArray = Object.values(userMap);
+
+  return {
+    chats: parsedChats,
+    users: usersArray,
+    totalUsers: usersArray.length
+  };
 }
 
 // API Routes
@@ -229,31 +275,30 @@ app.get('/api/tokens', async (req, res) => {
       return res.json({
         source: 'cache',
         lastFetchTime: new Date(lastFetchTime).toISOString(),
-        chats: cachedData
+        chats: cachedData.chats || cachedData,
+        users: cachedData.users || []
       });
     }
 
-    if (isFetching) {
-      if (cachedData) {
-        return res.json({
-          source: 'cache_stale',
-          lastFetchTime: new Date(lastFetchTime).toISOString(),
-          chats: cachedData
-        });
-      }
+    if (isFetching && cachedData) {
+      return res.json({
+        source: 'cache_stale',
+        lastFetchTime: new Date(lastFetchTime).toISOString(),
+        chats: cachedData.chats || cachedData,
+        users: cachedData.users || []
+      });
     }
 
-    isFetching = true;
-
-    const chats = await fetchFromOpenWebUI(req.query.url, req.query.key);
-    cachedData = chats;
+    const data = await fetchFromOpenWebUI(req.query.url, req.query.key);
+    cachedData = data;
     lastFetchTime = Date.now();
     isFetching = false;
 
     res.json({
       source: 'live',
       lastFetchTime: new Date(lastFetchTime).toISOString(),
-      chats
+      chats: data.chats,
+      users: data.users
     });
   } catch (err) {
     isFetching = false;

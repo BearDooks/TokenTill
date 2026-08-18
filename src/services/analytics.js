@@ -24,6 +24,7 @@ export function computeAnalytics(chats, selectedBaseline = 'claude-3-5-sonnet', 
   let totalPromptTokens = 0;
   let totalCompletionTokens = 0;
   const modelUsage = {};
+  const userUsage = {};
   const dailyMap = new Map(); // key: 'YYYY-MM-DD' => { promptTokens, completionTokens, chatsCount }
 
   // Sort chronological for timeline
@@ -32,6 +33,25 @@ export function computeAnalytics(chats, selectedBaseline = 'claude-3-5-sonnet', 
   sortedChronological.forEach(chat => {
     totalPromptTokens += chat.promptTokens;
     totalCompletionTokens += chat.completionTokens;
+
+    // Track user distribution
+    const userId = chat.userId || 'unknown';
+    const userName = chat.userName || (userId === 'unknown' ? 'Default User' : userId);
+    if (!userUsage[userId]) {
+      userUsage[userId] = {
+        id: userId,
+        name: userName,
+        email: chat.userEmail || '',
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        chatCount: 0
+      };
+    }
+    userUsage[userId].promptTokens += chat.promptTokens;
+    userUsage[userId].completionTokens += chat.completionTokens;
+    userUsage[userId].totalTokens += chat.totalTokens;
+    userUsage[userId].chatCount += 1;
 
     // Track model distribution
     const model = chat.primaryModel || 'unknown';
@@ -127,6 +147,7 @@ export function computeAnalytics(chats, selectedBaseline = 'claude-3-5-sonnet', 
       daysSpan: Math.max(1, Math.round((endTimestamp - startTimestamp) / (86400 * 1000)))
     },
     modelUsage,
+    userUsage,
     dailyTimeline,
     modelComparison,
     topChats
